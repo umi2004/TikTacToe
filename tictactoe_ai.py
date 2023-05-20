@@ -1,3 +1,5 @@
+import copy
+import random
 import sys
 import pygame
 import numpy as np
@@ -72,14 +74,88 @@ class Board:
         return self.marked_sqrs == 0
 
 
+# AI class
+class AI:
+    def __init__(self, level=1, player=2):  # level 0 is random AI default
+        self.level = level
+        self.player = player
+
+    def randoms(self, board):
+        empty_sqra = board.get_empty_sqrs()
+        idx = random.randrange(0, len(empty_sqra))
+
+        return empty_sqra[idx]  # return some (row and col)
+
+    def minimax(self, board, maximizing):
+        # Base case
+        case = board.final_state()
+
+        # player 1 wins
+        if case == 1:
+            return 1, None  # eval, move
+
+        # player 2 wins (ai)
+        if case == 2:
+            return -1, None  # eval, move
+
+        # draw
+        elif board.isfull():
+            return 0, None  # eval, move
+
+        if maximizing:
+            max_eval = -100
+            best_move = None
+            empty_sqra = board.get_empty_sqrs()
+
+            for (row, col) in empty_sqra:
+                temp_board = copy.deepcopy(board)
+                temp_board.mark_sqr(row, col, 1)
+                eval = self.minimax(temp_board, False)[0]
+
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = (row, col)
+
+            return max_eval, best_move
+
+        elif not maximizing:
+            min_eval = 100
+            best_move = None
+            empty_sqra = board.get_empty_sqrs()
+
+            for (row, col) in empty_sqra:
+                temp_board = copy.deepcopy(board)
+                temp_board.mark_sqr(row, col, self.player)
+                eval = self.minimax(temp_board, True)[0]
+
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = (row, col)
+
+            return min_eval, best_move
+
+    def eval(self, main_board):
+        if self.level == 0:
+            # random choice
+            eval = 'random'
+            move = self.randoms(main_board)
+        else:
+            # minimax algo choice
+            eval, move = self.minimax(main_board, False)
+
+        print(f'AI has chosen to mark the square in pos {move} with an eval of {eval}"')
+
+        return move  # row and col
+
+
 # Game Class
 class Game:
     def __init__(self):
         self.board = Board()
-        # self.ai = AI()
+        self.ai = AI()
         self.show_lines()
         self.player = 1  # player 1 as cross and 2 as circles
-        self.gamemode = 'pvp'  # game mode as pvp
+        self.gamemode = 'ai'  # game mode as pvp
         self.running = True
 
     # Tik Tac Toe 3 by 3 lines
@@ -118,6 +194,7 @@ def main():
     # object
     game = Game()
     board = game.board  # Simplicity
+    ai = game.ai
 
     # main loop
     while True:
@@ -136,6 +213,15 @@ def main():
                     game.draw_fig(row, col)
                     game.next_turn()
                     # print(board.squares)  # Display
+
+        if game.gamemode == 'ai' and game.player == ai.player:
+            pygame.display.update()
+
+            row, col = ai.eval(board)
+
+            board.mark_sqr(row, col, ai.player)
+            game.draw_fig(row, col)
+            game.next_turn()
 
         pygame.display.update()  # Update
 
