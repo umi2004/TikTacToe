@@ -19,7 +19,7 @@ class Board:
         self.empty_sqrs = self.squares  # list of squares
         self.marked_sqrs = 0  # list of numbers
 
-    def final_state(self):
+    def final_state(self, show=False):
         """
             @return 0 if there is no win yet
             @return 1 if player 1 wins
@@ -30,22 +30,42 @@ class Board:
         for col in range(CS):
             if self.squares[0][col] == self.squares[1][col] == \
                     self.squares[2][col] != 0:
+                if show:
+                    colour = CIRC_C if self.squares[0][col] == 2 else CROSS_C
+                    ipos = (col * SQ + SQ // 2, 20)
+                    fpos = (col * SQ + SQ // 2, H - 20)
+                    pygame.draw.line(scn, colour, ipos, fpos, LINE_W)
                 return self.squares[0][col]  # call for player number
 
         # horizontal wins
         for row in range(RS):
             if self.squares[row][0] == self.squares[row][1] == \
                     self.squares[row][2] != 0:
+                if show:
+                    colour = CIRC_C if self.squares[row][0] == 2 else CROSS_C
+                    ipos = (20, row * SQ + SQ // 2)
+                    fpos = (W - 20, row * SQ + SQ // 2)
+                    pygame.draw.line(scn, colour, ipos, fpos, LINE_W)
                 return self.squares[row][0]  # call for player number
 
         # desc diagonal
         if self.squares[0][0] == self.squares[1][1] == \
                 self.squares[2][2] != 0:
+            if show:
+                colour = CIRC_C if self.squares[1][1] == 2 else CROSS_C
+                ipos = (20, 20)
+                fpos = (W - 20, H - 20)
+                pygame.draw.line(scn, colour, ipos, fpos, CROSS_W)
             return self.squares[1][1]  # call for player number
 
         # asc diagonal
         if self.squares[2][0] == self.squares[1][1] == \
                 self.squares[0][2] != 0:
+            if show:
+                colour = CIRC_C if self.squares[1][1] == 2 else CROSS_C
+                ipos = (20, H - 20)
+                fpos = (W - 20, 20)
+                pygame.draw.line(scn, colour, ipos, fpos, CROSS_W)
             return self.squares[1][1]  # call for player number
 
         return 0  # still there's no win yet
@@ -158,8 +178,16 @@ class Game:
         self.gamemode = 'ai'  # game mode as pvp
         self.running = True
 
+    def make_move(self, row, col):
+        self.board.mark_sqr(row, col, self.player)
+        self.draw_fig(row, col)
+        self.next_turn()
+
     # Tik Tac Toe 3 by 3 lines
     def show_lines(self):
+        # update screen
+        scn.fill(BG_C)
+
         # vertical
         pygame.draw.line(scn, LINE_C, (SQ, 0), (SQ, H), LINE_W)
         pygame.draw.line(scn, LINE_C, (W - SQ, 0), (W - SQ, H), LINE_W)
@@ -188,6 +216,15 @@ class Game:
             center = (col * SQ + SQ // 2, row * SQ + SQ // 2)
             pygame.draw.circle(scn, CIRC_C, center, RAD, CIRC_W)
 
+    def change_gamemode(self):
+        self.gamemode = 'ai' if self.gamemode == 'pvp' else 'pvp'
+
+    def isover(self):
+        return self.board.final_state(show=True) != 0 or self.board.isfull()
+
+    def reset(self):
+        self.__init__()
+
 
 # Base Main Format
 def main():
@@ -202,26 +239,48 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                # g-gamemode
+                if event.key == pygame.K_g:  # pvp
+                    game.change_gamemode()
+
+                # r-restart
+                if event.key == pygame.K_r:
+                    game.reset()
+                    board = game.board  # new board reset
+                    ai = game.ai
+
+                # 0-random ai
+                if event.key == pygame.K_0:  # random ai
+                    ai.level = 0
+
+                # 1-random ai
+                if event.key == pygame.K_1:  # unbeatable ai
+                    ai.level = 1
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos  # input as pixel
                 row = pos[1] // SQ  # set it as 3 rows
                 col = pos[0] // SQ  # set it as 3 columns
 
                 # Marked on board if it already clicked on specific box
-                if board.empty_sqr(row, col):
-                    board.mark_sqr(row, col, game.player)
-                    game.draw_fig(row, col)
-                    game.next_turn()
+                if board.empty_sqr(row, col) and game.running:
+                    game.make_move(row, col)
                     # print(board.squares)  # Display
 
-        if game.gamemode == 'ai' and game.player == ai.player:
+                    if game.isover():
+                        game.running = False
+
+        if game.gamemode == 'ai' and game.player == ai.player and game.running:
             pygame.display.update()
 
             row, col = ai.eval(board)
 
-            board.mark_sqr(row, col, ai.player)
-            game.draw_fig(row, col)
-            game.next_turn()
+            game.make_move(row, col)
+
+            if game.isover():
+                game.running = False
 
         pygame.display.update()  # Update
 
