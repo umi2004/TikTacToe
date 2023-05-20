@@ -71,12 +71,16 @@ class Board:
     def isempty(self):
         return self.marked_sqrs == 0
 
+
 # Game Class
 class Game:
     def __init__(self):
         self.board = Board()
+        # self.ai = AI()
         self.show_lines()
         self.player = 1  # player 1 as cross and 2 as circles
+        self.gamemode = 'pvp'  # game mode as pvp
+        self.running = True
 
     # Tik Tac Toe 3 by 3 lines
     def show_lines(self):
